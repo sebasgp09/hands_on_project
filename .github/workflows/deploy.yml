@@ -1,0 +1,35 @@
+name: MLOps_Deploy_Azure
+
+# 1. Evento: ¿Cuándo corre esto?
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  build-and-deploy:
+    # 2. Runner: ¿En qué computadora corre? (Una de GitHub con Linux)
+    runs-on: ubuntu-latest
+
+    steps:
+    # 3. Steps: La lista de tareas
+    - name: 'Checkout del código'
+      uses: actions/checkout@v3
+
+    - name: 'Login en Azure Container Registry'
+      uses: azure/docker-login@v1
+      with:
+        login-server: pycaretsgp.azurecr.io
+        username: ${{ secrets.ACR_USERNAME }}
+        password: ${{ secrets.ACR_PASSWORD }}
+
+    - name: 'Construir y Subir imagen Docker'
+      run: |
+        docker build -t pycaretsgp.azurecr.io/pycaret-insurance:latest .
+        docker push pycaretsgp.azurecr.io/pycaret-insurance:latest
+
+    - name: 'Desplegar en Azure Web App'
+      uses: azure/webapps-deploy@v2
+      with:
+        app-name: 'pycaret-insurance'
+        publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+        images: 'pycaretsgp.azurecr.io/pycaret-insurance:latest'
